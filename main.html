@@ -1,0 +1,1231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<link rel="stylesheet" href="style.css"/>
+<link rel="stylesheet" href="assets\css\style.css"/> 
+<!-- Copyright 1998-2021 by Northwoods Software Corporation. -->
+
+</head>
+
+<body>
+  <div class="topnav" style="width: 100%; height:50px">
+    <a href="logout.php">Logout</a>
+    <a href="update.php">Update</a>
+    <a href="feedback.php">Feedback</a>
+  </div>
+  <!-- This top nav is not part of the sample code -->
+  <nav id="navTop" >
+    <div>
+      
+      <button id="topnavButton" class="rounded-lg sm:hidden focus:outline-none focus:ring" aria-label="Navigation">
+        <svg fill="currentColor" viewBox="0 0 20 20" class="w-6 h-6">
+          <path id="topnavOpen" fill-rule="evenodd" d="M3 5a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 10a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM9 15a1 1 0 011-1h6a1 1 0 110 2h-6a1 1 0 01-1-1z" clip-rule="evenodd"></path>
+          <path id="topnavClosed" class="hidden" fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"></path>
+        </svg>
+      </button>
+      
+    </div>
+    <hr class="border-b border-gray-600 opacity-50 my-0 py-0" />
+  </nav>
+    <!-- * * * * * * * * * * * * * -->
+    <!-- Start of GoJS sample code -->
+    
+   
+  
+
+  <br><select id="selectbox">
+      <option value="18">AND Gate</option>
+      <option value="19">OR Gate</option>
+      <option value="20">XOR</option>
+      <option value="21">XNOR Gate</option>
+      <option value="2">2*1 mux</option>
+      <option value="4">4*1 mux</option>
+      <option value="5">Half Adder</option>
+      <option value="6">Full Adder</option>
+      <option value="11">xor using nand gates</option>
+      <option value="12">Latch</option>
+      <option value="13">SR-Latch</option>
+      <option value="14">SR-Latch with next output</option>
+      <option value="16">1*2 demux</option>
+      <option value="15">1*4 demux</option>
+      <option value="17">2*4 decoder</option>
+
+    </select><br><br>
+  <button onclick="init()">submit</button><button><a href="main.html">clear</a></button>
+<div id="sample">
+  <div style="width: 100%; display: flex; justify-content: space-between">
+    <div id="palette" style="width: 100px; height: 500px; margin-right: 2px; background-color: whitesmoke; border: solid 1px black"></div> <!-- side to diaplay gates-->
+    <div id="myDiagramDiv" style="flex-grow: 1; height: 500px; border: solid 1px black"></div>
+  </div>
+ 
+  
+ 
+</div>
+</body>
+<!--  This script is part of the gojs.net website, and is not needed to run the sample -->
+<script src="../assets/js/goSamples.js"></script>
+</html>
+
+
+<script src="release\go.js"></script>
+
+  <script src="release\go-debug.js"></script>
+  <script src="extensions\Figures.js"></script>
+
+
+
+  
+    <script id="code">
+
+    var red = "red";  // 0 or false
+    var green = "green";  // 1 or true
+
+    function init() {
+      x=document.getElementById("selectbox");
+      val=x.options[x.selectedIndex].value
+      
+      if(val==2 || val==5 || val==6 || val==11 || val==12 || val==13 || val==16 || val==17 || val==18 || val==19 || val==20 || val==21){
+        a=2,
+        o=2,
+        owo=0
+      }
+      else if(val==4 || val==15){
+        a=3,o=4,owo=0
+      }
+      else if(val==14)
+      {
+        a=2,
+        o=2,
+        owo=1
+      }
+      
+      var $ = go.GraphObject.make;  // for conciseness in defining templates
+
+      myDiagram =
+        $(go.Diagram, "myDiagramDiv",  // create a new Diagram in the HTML DIV element "myDiagramDiv"
+          {
+            "draggingTool.isGridSnapEnabled": true,  // dragged nodes will snap to a grid of 10x10 cells
+            "undoManager.isEnabled": true
+          });
+
+       
+     
+
+
+
+
+      
+      // when the document is modified, add a "*" to the title and enable the "Save" button
+      myDiagram.addDiagramListener("Modified", function(e) {
+        var button = document.getElementById("saveModel");
+        if (button) button.disabled = !myDiagram.isModified;
+        var idx = document.title.indexOf("*");
+        if (myDiagram.isModified) {
+          if (idx < 0) document.title += "*";
+        } else {
+          if (idx >= 0) document.title = document.title.substr(0, idx);
+        }
+      });
+
+      var palette = new go.Palette("palette");  // create a new Palette in the HTML DIV element "palette"
+
+
+      // creates relinkable Links that will avoid crossing Nodes when possible and will jump over other Links in their paths
+     
+      myDiagram.linkTemplate =
+        $(go.Link,
+          {
+            routing: go.Link.AvoidsNodes,
+            curve: go.Link.JumpOver,
+            corner: 3,
+            relinkableFrom: true, relinkableTo: true,
+            selectionAdorned: false, // Links are not adorned when selected so that their color remains visible.
+            shadowOffset: new go.Point(0, 0), shadowBlur: 5, shadowColor: "blue",
+          },
+          new go.Binding("isShadowed", "isSelected").ofObject(),
+          $(go.Shape,
+            { name: "SHAPE", strokeWidth: 2, stroke: red }));
+
+
+
+      // node template helpers
+      var sharedToolTip =
+        $("ToolTip",
+          { "Border.figure": "RoundedRectangle" },
+          $(go.TextBlock, { margin: 2 },
+            new go.Binding("text", "", function(d) { return d.category; })));
+          
+
+
+      // define some common property settings
+      function nodeStyle() {
+        return [new go.Binding("location", "loc", go.Point.parse).makeTwoWay(go.Point.stringify),
+        new go.Binding("isShadowed", "isSelected").ofObject(),
+        {
+          selectionAdorned: false,
+          shadowOffset: new go.Point(0, 0),
+          shadowBlur: 15,
+          shadowColor: "blue",
+          toolTip: sharedToolTip
+        }];
+      }
+      
+
+
+      function shapeStyle() {
+        return {
+          name: "NODESHAPE",
+          fill: "lightgray",   //inside gates color
+          stroke: "darkslategray",
+          desiredSize: new go.Size(40, 40), //size of gates
+          strokeWidth: 2   //outside lines width
+        };
+      }
+
+
+
+      //port for gates
+      function portStyle(input) {
+        return {
+          desiredSize: new go.Size(5, 5),  //port size
+          fill: "green",    //color of the port
+          fromSpot: go.Spot.Right,  //From node to go link from left or right side
+          fromLinkable: !input,
+          toSpot: go.Spot.Left,  // to node to link port from left or right
+          toLinkable: input,
+          toMaxLinks: 2,  //no of links to attach to the node in each port
+          cursor: "pointer"
+        };
+      }
+
+      
+      
+      // define templates for each type of node
+      //input node
+      var inputTemplate =
+        $(go.Node, "Spot", nodeStyle(),    //  calling the nodeStyle() function and panel is Spot
+
+          $(go.Shape, "circle", shapeStyle(),  // Calling the gate and gates shape is circle
+            { fill: red }),  // override the default fill (from shapeStyle()) to be red
+            $(go.TextBlock, new go.Binding("text","text")),
+          $(go.Shape, "Rectangle", portStyle(false),  // for port calling the function  portStyle() and shape of the port is Rectangle is mentioned here
+            { portId: "", alignment: new go.Spot(1, 0.5) }),   // port has no id and alignment is 1,0.5(x,y)
+          
+          { // if double-clicked, an input node will change its value, represented by the color.
+            doubleClick: function(e, obj) {
+              e.diagram.startTransaction("Toggle Input");
+              var shp = obj.findObject("NODESHAPE");
+              shp.fill = (shp.fill === green) ? red : green;  //when doubleclick color change
+              updateStates();
+              e.diagram.commitTransaction("Toggle Input");
+            }
+          }
+        );
+
+        
+
+
+        var handTemplate =
+        $(go.Node, "Spot", nodeStyle(),    //  calling the nodeStyle() function and panel is Spot
+
+          $(go.Shape, "Arrow2", shapeStyle(), // Calling the gate and gates shape is circle
+            { fill: green, height:40, width:60 }),  // override the default fill (from shapeStyle()) to be red
+          $(go.TextBlock, new go.Binding("text","text")),
+          $(go.Shape, "Rectangle", portStyle(false),  // for port calling the function  portStyle() and shape of the port is Rectangle is mentioned here
+            { portId: "", alignment: new go.Spot(1, 0.5) }),   // port has no id and alignment is 1,0.5(x,y)
+          
+          { // if double-clicked, an input node will change its value, represented by the color.
+            doubleClick: function(e, obj) {
+              e.diagram.startTransaction("Toggle Input");
+              var shp = obj.findObject("NODESHAPE");
+              shp.fill = (shp.fill === green) ? red : green;  //when doubleclick color change
+              updateStates();
+              e.diagram.commitTransaction("Toggle Input");
+            }
+          }
+        );
+
+     /*var handTemplate = 
+        $(go.Node, "Spot", nodeStyle(),
+        
+          $(go.Shape, "Arrow2",
+            { fill:"white", height:40, width:60}),
+            $(go.TextBlock, new go.Binding("text","text")),
+          $(go.Shape, "Rectangle", portStyle(false),
+            { portId:"out", alignment: new go.Spot(1,0.5) }),
+          
+       
+        );*/
+
+
+      //output node
+      if(owo=0)
+      {
+        var outputTemplate =
+          $(go.Node, "Spot", nodeStyle(),
+            $(go.Shape, "Rectangle", shapeStyle(),  //  Shape of the node is Rectangle and calling shapeStyle function()
+              { fill: green }),  // override the default fill (from shapeStyle()) to be green
+            $(go.Shape, "Rectangle", portStyle(true),  // Shape of the port is Rectangle 
+              { portId: "in", alignment: new go.Spot(0, 0.5) })
+          );
+      } 
+      if(owo=1)
+      {
+        var outputTemplate =
+        $(go.Node, "Spot", nodeStyle(),
+          $(go.Shape, "Rectangle", shapeStyle(),
+            { fill: green }),  // override the default fill (from shapeStyle()) to be green
+          $(go.Shape, "Rectangle", portStyle(true),  // the only port
+            { portId: "in", alignment: new go.Spot(0, 0.5) }),
+
+          $(go.Shape, "Rectangle", portStyle(false),
+            { portId: "out", alignment: new go.Spot(1, 0.5) }),
+
+           
+        );
+      }
+      if(a==3){  // and gate with 3 inputs
+          // AndGate and no of ports
+          var andTemplate =
+            $(go.Node, "Spot", nodeStyle(),
+              $(go.Shape, "AndGate", shapeStyle()),   // Shape of the node is AndGate and calling shapeStyle function()
+              
+              $(go.Shape, "Rectangle", portStyle(true),      //ports
+                { portId: "in1", alignment: new go.Spot(0, 0.3) }),
+              $(go.Shape, "Rectangle", portStyle(true),      //ports
+                { portId: "in2", alignment: new go.Spot(0, 0.6) }),
+               $(go.Shape, "Rectangle", portStyle(true),      //ports
+                { portId: "in3", alignment: new go.Spot(0, 0.9) }),
+              
+              
+              $(go.Shape, "Rectangle", portStyle(false),
+                { portId: "out", alignment: new go.Spot(1, 0.5) })
+            );
+          }
+
+      if(a==2){ // and gate with 2 inputs
+      // AndGate and no of ports
+      var andTemplate =
+        $(go.Node, "Spot", nodeStyle(),
+          $(go.Shape, "AndGate", shapeStyle()),   // Shape of the node is AndGate and calling shapeStyle function()
+          
+          $(go.Shape, "Rectangle", portStyle(true),      //ports
+            { portId: "in1", alignment: new go.Spot(0, 0.3) }),
+          $(go.Shape, "Rectangle", portStyle(true),
+            { portId: "in2", alignment: new go.Spot(0, 0.7) }),
+          
+          $(go.Shape, "Rectangle", portStyle(false),
+            { portId: "out", alignment: new go.Spot(1, 0.5) })
+        );
+      }
+
+      //OrGate 
+      if(o==2){  // or gate with 2 inputs
+        var orTemplate =
+          $(go.Node, "Spot", nodeStyle(),
+            $(go.Shape, "OrGate", shapeStyle()),
+            $(go.Shape, "Rectangle", portStyle(true),
+              { portId: "in1", alignment: new go.Spot(0.16, 0.3) }),
+            $(go.Shape, "Rectangle", portStyle(true),
+              { portId: "in2", alignment: new go.Spot(0.16, 0.7) }),
+           
+            
+            $(go.Shape, "Rectangle", portStyle(false),
+              { portId: "out", alignment: new go.Spot(1, 0.5) }),
+           
+          );}
+      
+      
+      if(o==4){   // or gate with 4 nputs
+        var orTemplate =
+          $(go.Node, "Spot", nodeStyle(),
+            $(go.Shape, "OrGate", shapeStyle()),
+            $(go.Shape, "Rectangle", portStyle(true),
+              { portId: "in1", alignment: new go.Spot(0.16, 0.2) }),
+            $(go.Shape, "Rectangle", portStyle(true),
+              { portId: "in2", alignment: new go.Spot(0.16, 0.4) }),
+            $(go.Shape, "Rectangle", portStyle(true),
+              { portId: "in3", alignment: new go.Spot(0.16, 0.6) }),
+            $(go.Shape, "Rectangle", portStyle(true),
+              { portId: "in4", alignment: new go.Spot(0.16, 0.8) }),
+            
+            $(go.Shape, "Rectangle", portStyle(false),
+              { portId: "out", alignment: new go.Spot(1, 0.5) }),
+          
+          );
+        }
+      
+
+      //xor gate
+      var xorTemplate =
+        $(go.Node, "Spot", nodeStyle(),
+          $(go.Shape, "XorGate", shapeStyle()),
+          $(go.Shape, "Rectangle", portStyle(true),
+            { portId: "in1", alignment: new go.Spot(0.26, 0.3) }),
+          $(go.Shape, "Rectangle", portStyle(true),
+            { portId: "in2", alignment: new go.Spot(0.26, 0.7) }),
+          $(go.Shape, "Rectangle", portStyle(false),
+            { portId: "out", alignment: new go.Spot(1, 0.5) })
+        );
+        
+
+      //NOR gate
+      var norTemplate =
+        $(go.Node, "Spot", nodeStyle(),
+          $(go.Shape, "NorGate", shapeStyle()),
+          $(go.Shape, "Rectangle", portStyle(true),
+            { portId: "in1", alignment: new go.Spot(0.16, 0.3) }),
+          $(go.Shape, "Rectangle", portStyle(true),
+            { portId: "in2", alignment: new go.Spot(0.16, 0.7) }),
+          $(go.Shape, "Rectangle", portStyle(false),
+            { portId: "out", alignment: new go.Spot(1, 0.5) })
+        );
+      
+
+      //XNOR
+      var xnorTemplate =
+        $(go.Node, "Spot", nodeStyle(),
+          $(go.Shape, "XnorGate", shapeStyle()),
+          $(go.Shape, "Rectangle", portStyle(true),
+            { portId: "in1", alignment: new go.Spot(0.26, 0.3) }),
+          $(go.Shape, "Rectangle", portStyle(true),
+            { portId: "in2", alignment: new go.Spot(0.26, 0.7) }),
+          $(go.Shape, "Rectangle", portStyle(false),
+            { portId: "out", alignment: new go.Spot(1, 0.5) })
+        );
+      
+
+      //NAND
+      var nandTemplate =
+        $(go.Node, "Spot", nodeStyle(),
+          $(go.Shape, "NandGate", shapeStyle()),
+          $(go.Shape, "Rectangle", portStyle(true),
+            { portId: "in1", alignment: new go.Spot(0, 0.3) }),
+          $(go.Shape, "Rectangle", portStyle(true),
+            { portId: "in2", alignment: new go.Spot(0, 0.7) }),
+          $(go.Shape, "Rectangle", portStyle(false),
+            { portId: "out", alignment: new go.Spot(1, 0.5) })
+        );
+      
+
+      //NOT
+      var notTemplate =
+        $(go.Node, "Spot", nodeStyle(),
+          $(go.Shape, "Inverter", { fill:"lightgray", height:25, width:25}),
+          $(go.Shape, "Rectangle", portStyle(true),
+            { portId: "in", alignment: new go.Spot(0, 0.5) }),
+          $(go.Shape, "Rectangle", portStyle(false),
+            { portId: "out", alignment: new go.Spot(1, 0.5) })
+        );
+
+      
+
+      // add the templates created above to myDiagram and palette
+      // TEMPLETE TO CALL ABOUE MENTIONED FUNCTIONS
+      myDiagram.nodeTemplateMap.add("input", inputTemplate);
+      myDiagram.nodeTemplateMap.add("output", outputTemplate);
+      myDiagram.nodeTemplateMap.add("and", andTemplate);
+      myDiagram.nodeTemplateMap.add("or", orTemplate);
+      myDiagram.nodeTemplateMap.add("xor", xorTemplate);
+      myDiagram.nodeTemplateMap.add("not", notTemplate);
+      myDiagram.nodeTemplateMap.add("nand", nandTemplate);
+      myDiagram.nodeTemplateMap.add("nor", norTemplate);
+      myDiagram.nodeTemplateMap.add("xnor", xnorTemplate);
+      myDiagram.nodeTemplateMap.add("hand", handTemplate);
+
+
+      
+      // (2*1) multiplexer
+      if(val==2)
+      {
+        myDiagram.model =
+      $(go.GraphLinksModel,
+          
+        {
+          linkFromPortIdProperty: "fromPort",
+          linkToPortIdProperty: "toPort",
+          nodeDataArray: [
+          {key:"input1", category:"input", loc:"-450 -210", text:"S"},
+
+          {key:"and1", category:"and", loc:"-150 -100"},
+          {key:"and2", category:"and", loc:"-150 0"},
+          
+          {key:"or1", category:"or", loc:"100 -50"},
+          {key:"output1", category:"output", loc:"200 -50"},
+          {key:"not1", category:"not", loc:"-250 20"},
+
+          {key:"hand1", category:"hand", loc:"-450 -110", text:"input1"},
+          {key:"hand2", category:"hand", loc:"-450 -10", text:"input2"},
+         
+
+         
+            
+          ],
+          linkDataArray: [
+          {from:"input1", fromPort:"out", to:"and1", toPort:"in2"},
+          {from:"input1", fromPort:"out", to:"not1", toPort:"in"},
+
+          {from:"hand1", fromPort:"out", to:"and1", toPort:"in1"},
+          {from:"hand2", fromPort:"out", to:"and2", toPort:"in1"},
+
+          
+
+          {from:"not1", fromPort:"out", to:"and2", toPort:"in2"},
+          
+
+          {from:"and1", fromPort:"out", to:"or1", toPort:"in1"},
+          {from:"and2", fromPort:"out", to:"or1", toPort:"in2"},
+         
+          {from:"or1", fromPort:"out", to:"output1", toPort:"in2"},
+          ]
+        });
+      }
+  
+      // (4*1) multiplexer
+      if(val==4){
+      myDiagram.model =
+      $(go.GraphLinksModel,
+          
+        {
+          linkFromPortIdProperty: "fromPort",
+          linkToPortIdProperty: "toPort",
+          nodeDataArray: [
+          {key:"input1", category:"input", loc:"-650 -310",text:"S1"},
+          {key:"input2", category:"input", loc:"-750 -260", text:"S2"},
+
+          {key:"and1", category:"and", loc:"-350 -200"},
+          {key:"and2", category:"and", loc:"-350 -100"},
+          {key:"and3", category:"and", loc:"-350 0"},
+          {key:"and4", category:"and", loc:"-350 100"},
+          {key:"or1", category:"or", loc:"-100 -40"},
+          {key:"output1", category:"output", loc:"0 -40"},
+          {key:"not1", category:"not", loc:"-450 -100"},
+          {key:"not2", category:"not", loc:"-450 -10"},
+          {key:"not3", category:"not", loc:"-450 70"},
+          {key:"not4", category:"not", loc:"-450 110"},
+
+          {key:"hand1", category:"hand", loc:"-750 -190", text:"input1"},
+          {key:"hand2", category:"hand", loc:"-750 -90", text:"input2"},
+          {key:"hand3", category:"hand", loc:"-750 10", text:"input3"},
+          {key:"hand4", category:"hand", loc:"-750 110", text:"input4"},
+          
+            
+            
+          ],
+          linkDataArray: [
+          {from:"input1", fromPort:"out", to:"and1", toPort:"in1"},
+          {from:"input1", fromPort:"out", to:"and2", toPort:"in1"},
+          {from:"input1", fromPort:"out", to:"not2", toPort:"in"},
+          {from:"input1", fromPort:"out", to:"not3", toPort:"in"},
+
+          {from:"input2", fromPort:"out", to:"and1", toPort:"in2"},
+          {from:"input2", fromPort:"out", to:"not1", toPort:"in"},
+          {from:"input2", fromPort:"out", to:"and3", toPort:"in2"},
+          {from:"input2", fromPort:"out", to:"not4", toPort:"in"},
+
+          {from:"not1", fromPort:"out", to:"and2", toPort:"in2"},
+          {from:"not2", fromPort:"out", to:"and3", toPort:"in1"},
+          {from:"not3", fromPort:"out", to:"and4", toPort:"in1"},
+          {from:"not4", fromPort:"out", to:"and4", toPort:"in2"},
+
+          {from:"hand1", fromPort:"out", to:"and1", toPort:"in3"},
+          {from:"hand2", fromPort:"out", to:"and2", toPort:"in3"},
+          {from:"hand3", fromPort:"out", to:"and3", toPort:"in3"},
+          {from:"hand4", fromPort:"out", to:"and4", toPort:"in3"},
+
+          {from:"and1", fromPort:"out", to:"or1", toPort:"in1"},
+          {from:"and2", fromPort:"out", to:"or1", toPort:"in2"},
+          {from:"and3", fromPort:"out", to:"or1", toPort:"in3"},
+          {from:"and4", fromPort:"out", to:"or1", toPort:"in4"},
+          {from:"or1", fromPort:"out", to:"output1", toPort:"in"},
+          ]
+        });
+      }
+      // Half Adder
+      if(val==5){
+        myDiagram.model =
+        $(go.GraphLinksModel,
+            
+          {
+            linkFromPortIdProperty: "fromPort",
+            linkToPortIdProperty: "toPort",
+            nodeDataArray: [
+            {key:"input1", category:"input", loc:"-1200 -210"},
+            {key:"input2", category:"input", loc:"-1250 -90"},
+  
+            {key:"and1", category:"and", loc:"-950 -100"},
+            {key:"xor1", category:"xor", loc:"-950 -200"},
+            
+            {key:"output1", category:"output", loc:"-750 -200", Text:"hello"},
+            {key:"output2", category:"output", loc:"-750 -100"},
+              
+              
+            ],
+            linkDataArray: [
+            {from:"input1", fromPort:"out", to:"and1", toPort:"in1"},
+            {from:"input1", fromPort:"out", to:"xor1", toPort:"in1"},
+            
+  
+            {from:"input2", fromPort:"out", to:"and1", toPort:"in2"},
+            {from:"input2", fromPort:"out", to:"xor1", toPort:"in"},
+            
+  
+            {from:"xor1", fromPort:"out", to:"output1", toPort:"in2"},
+            {from:"and1", fromPort:"out", to:"output2", toPort:"in1"},
+           
+            ]
+          });
+        }
+       
+        // Full Adder
+        if(val==6){
+        myDiagram.model =
+        $(go.GraphLinksModel,
+            
+          {
+            linkFromPortIdProperty: "fromPort",
+            linkToPortIdProperty: "toPort",
+            nodeDataArray: [
+            {key:"input1", category:"input", loc:"-550 -210"},
+            {key:"input2", category:"input", loc:"-600 -90"},
+            {key:"input3", category:"input", loc:"-550 0"},
+            {key:"xor1", category:"xor", loc:"-350 -200"},
+            {key:"and1", category:"and", loc:"-350 -100"},
+            {key:"xor2", category:"xor", loc:"-150 -200"},
+            {key:"and2", category:"and", loc:"-150 -100"},
+            {key:"or1", category:"or", loc:"-40 -50"},
+            {key:"output1", category:"output", loc:" 100 -200"},
+            {key:"output2", category:"output", loc:" 100 -50"},
+            
+              
+              
+            ],
+            linkDataArray: [
+            {from:"input1", fromPort:"out", to:"xor1", toPort:"in1"},
+            {from:"input1", fromPort:"out", to:"and1", toPort:"in1"},
+           
+            
+  
+            {from:"input2", fromPort:"out", to:"xor1", toPort:"in2",text:"S"},
+            {from:"input2", fromPort:"out", to:"and1", toPort:"in2",text:"C"},
+            
+  
+            {from:"xor1", fromPort:"out", to:"xor2", toPort:"in1"},
+            {from:"xor1", fromPort:"out", to:"and2", toPort:"in1"},
+            {from:"xor2", fromPort:"out", to:"output1", toPort:"in"},
+            {from:"and1", fromPort:"out", to:"or1", toPort:"in2"},
+            {from:"and2", fromPort:"out", to:"or1", toPort:"in1"},
+  
+            {from:"input3", fromPort:"out", to:"xor2", toPort:"in2"},
+            {from:"input3", fromPort:"out", to:"and2", toPort:"in2"},
+  
+            {from:"or1", fromPort:"out", to:"output2", toPort:"in"},
+  
+  
+  
+  
+           
+  
+           
+            ]
+          });
+
+        }
+
+
+      // Xor using nand gates
+      if(val==11){
+      myDiagram.model =
+      $(go.GraphLinksModel,
+          
+        {
+          linkFromPortIdProperty: "fromPort",
+          linkToPortIdProperty: "toPort",
+          nodeDataArray: [
+          {key:"input1", category:"input", loc:"-650 -150"},
+          {key:"input2", category:"input", loc:"-650 -100"},
+          {key:"nand1", category:"nand", loc:"-450 -130"},
+          {key:"nand2", category:"nand", loc:"-350 -210"},
+          {key:"nand3", category:"nand", loc:"-350 -50"},
+          {key:"nand4", category:"nand", loc:"-150 -130"},
+          
+          {key:"output1", category:"output", loc:" 100 -130"},
+         
+          
+            
+            
+          ],
+          linkDataArray: [
+          {from:"input1", fromPort:"out", to:"nand1", toPort:"in1"},
+          {from:"input1", fromPort:"out", to:"nand2", toPort:"in1"},
+         
+          
+
+          {from:"input2", fromPort:"out", to:"nand1", toPort:"in2"},
+          {from:"input2", fromPort:"out", to:"nand3", toPort:"in2"},
+          
+
+          {from:"nand1", fromPort:"out", to:"nand2", toPort:"in2"},
+          {from:"nand1", fromPort:"out", to:"nand3", toPort:"in1"},
+          {from:"nand2", fromPort:"out", to:"nand4", toPort:"in"},
+          {from:"nand3", fromPort:"out", to:"nand4", toPort:"in2"},
+         
+          {from:"nand4", fromPort:"out", to:"output1", toPort:"in"},
+
+
+
+
+         
+
+         
+          ]
+        });
+      }
+
+
+      if(val==12)
+      {
+        myDiagram.model =
+        $(go.GraphLinksModel,
+            
+          {
+            linkFromPortIdProperty: "fromPort",
+            linkToPortIdProperty: "toPort",
+            nodeDataArray: [
+            
+            {key:"output1", category:"output", loc:"-250 -50"},
+            {key:"output2", category:"output", loc:"-250 80"},
+            {key:"nand1", category:"nand", loc:"-450 -50"},
+            {key:"nand2", category:"nand", loc:"-450 80"},
+           
+              
+              
+            ],
+            linkDataArray: [
+           
+            
+  
+            {from:"nand1", fromPort:"out", to:"nand2", toPort:"in1"},
+            {from:"nand2", fromPort:"out", to:"nand1", toPort:"in1"},
+  
+  
+            {from:"nand1", fromPort:"out", to:"output1", toPort:"in"},
+            {from:"nand2", fromPort:"out", to:"output2", toPort:"in"},
+            
+  
+            ]
+          });
+      }
+
+
+      if(val==13)
+      {
+        myDiagram.model =
+      $(go.GraphLinksModel,
+          
+        {
+          linkFromPortIdProperty: "fromPort",
+          linkToPortIdProperty: "toPort",
+          nodeDataArray: [
+          
+          {key:"output1", category:"output", loc:"-250 -50"},
+          {key:"output2", category:"output", loc:"-250 80"},
+          {key:"nand1", category:"nand", loc:"-450 -50"},
+          {key:"nand2", category:"nand", loc:"-450 80"},
+          {key:"nand3", category:"nand", loc:"-550 -50"},
+          {key:"nand4", category:"nand", loc:"-550 80"},
+          {key:"input1", category:"input", loc:"-650 -50"},
+          {key:"input2", category:"input", loc:"-650 80"},
+         
+            
+            
+          ],
+          linkDataArray: [
+         
+          
+
+          {from:"nand1", fromPort:"out", to:"nand2", toPort:"in1"},
+          {from:"nand2", fromPort:"out", to:"nand1", toPort:"in2"},
+          {from:"nand1", fromPort:"out", to:"output1", toPort:"in"},
+          {from:"nand2", fromPort:"out", to:"output2", toPort:"in"},
+          {from:"nand3", fromPort:"out", to:"nand1", toPort:"in1"},
+          {from:"nand4", fromPort:"out", to:"nand2", toPort:"in2"},
+          {from:"input1", fromPort:"out", to:"nand3", toPort:"in1"},
+          {from:"input2", fromPort:"out", to:"nand4", toPort:"in1"},
+          
+
+          ]
+        });
+      }
+
+      if(val==14)
+      {
+        myDiagram.model =
+      $(go.GraphLinksModel,
+          
+        {
+          linkFromPortIdProperty: "fromPort",
+          linkToPortIdProperty: "toPort",
+          nodeDataArray: [
+          
+          {key:"output1", category:"output", loc:"-350 -50"},
+          {key:"output2", category:"output", loc:"-350 80"},
+          {key:"nand1", category:"nand", loc:"-450 -50"},
+          {key:"nand2", category:"nand", loc:"-450 80"},
+          {key:"nand3", category:"nand", loc:"-550 -50"},
+          {key:"nand4", category:"nand", loc:"-550 80"},
+          {key:"input1", category:"input", loc:"-650 -50"},
+          {key:"input2", category:"input", loc:"-650 80"},
+          {key:"output3", category:"output", loc:"-150 -50"},
+          {key:"output4", category:"output", loc:"-150 80"},
+          {key:"nand5", category:"nand", loc:"-260 -50"},
+          {key:"nand6", category:"nand", loc:"-250 80"},
+         
+            
+            
+          ],
+          linkDataArray: [
+         
+          
+
+          {from:"nand1", fromPort:"out", to:"nand2", toPort:"in1"},
+          {from:"nand2", fromPort:"out", to:"nand1", toPort:"in2"},
+          {from:"nand1", fromPort:"out", to:"output1", toPort:"in"},
+          {from:"nand2", fromPort:"out", to:"output2", toPort:"in"},
+          {from:"nand3", fromPort:"out", to:"nand1", toPort:"in1"},
+          {from:"nand4", fromPort:"out", to:"nand2", toPort:"in2"},
+          {from:"input1", fromPort:"out", to:"nand3", toPort:"in1"},
+          {from:"input2", fromPort:"out", to:"nand4", toPort:"in1"},
+
+          {from:"output1", fromPort:"out", to:"nand6", toPort:"in1"},
+          {from:"output2", fromPort:"out", to:"nand5", toPort:"in2"},
+          {from:"nand1", fromPort:"out", to:"output1", toPort:"in"},
+          {from:"nand2", fromPort:"out", to:"output2", toPort:"in"},
+
+          {from:"nand3", fromPort:"out", to:"nand5", toPort:"in1"},
+          {from:"nand4", fromPort:"out", to:"nand6", toPort:"in2"},
+          {from:"nand5", fromPort:"out", to:"output3", toPort:"in"},
+          {from:"nand6", fromPort:"out", to:"output4", toPort:"in"},
+
+          ]
+        });
+      }
+      
+
+
+      // (1*4) demux
+      if(val==15){
+       myDiagram.model =
+       $(go.GraphLinksModel,
+          
+        {
+          linkFromPortIdProperty: "fromPort",
+          linkToPortIdProperty: "toPort",
+          nodeDataArray: [
+          
+          {key:"output1", category:"output", loc:"-450 -200"},
+          {key:"output2", category:"output", loc:"-450 -100"},
+          {key:"output3", category:"output", loc:"-450 0"},
+          {key:"output4", category:"output", loc:"-450 100"},
+
+          {key:"and1", category:"and", loc:"-650 -200"},
+          {key:"and2", category:"and", loc:"-650 -100"},
+          {key:"and3", category:"and", loc:"-650 0"},
+          {key:"and4", category:"and", loc:"-650 100"},
+
+          {key:"input1", category:"input", loc:"-950 -310",text:"S1"},
+          {key:"input2", category:"input", loc:"-1000 -250",text:"S2"},
+         
+          {key:"hand1", category:"hand", loc:"-1050 -50", text:"input"},
+         
+          {key:"not1", category:"not", loc:"-750 -85"},
+          {key:"not2", category:"not", loc:"-750 5"},
+          {key:"not3", category:"not", loc:"-750 100"},
+          {key:"not4", category:"not", loc:"-750 140"},
+            
+            
+          ],
+          linkDataArray: [
+         
+          {from:"hand1", fromPort:"out", to:"and1", toPort:"in1"},
+          {from:"hand1", fromPort:"out", to:"and2", toPort:"in1"},
+          {from:"hand1", fromPort:"out", to:"and3", toPort:"in1"},
+          {from:"hand1", fromPort:"out", to:"and4", toPort:"in1"},
+
+          {from:"and1", fromPort:"out", to:"output1", toPort:"in"},
+          {from:"and2", fromPort:"out", to:"output2", toPort:"in"},
+          {from:"and3", fromPort:"out", to:"output3", toPort:"in"},
+          {from:"and4", fromPort:"out", to:"output4", toPort:"in"},
+
+          {from:"input1", fromPort:"out", to:"and1", toPort:"in2"},
+          {from:"input1", fromPort:"out", to:"and2", toPort:"in2"},
+          {from:"input1", fromPort:"out", to:"not2", toPort:"in"},
+          {from:"input1", fromPort:"out", to:"not3", toPort:"in"},
+
+          {from:"input2", fromPort:"out", to:"and1", toPort:"in3"},
+          {from:"input2", fromPort:"out", to:"not1", toPort:"in"},
+          {from:"input2", fromPort:"out", to:"and3", toPort:"in3"},         
+          {from:"input2", fromPort:"out", to:"not4", toPort:"in"},
+
+         
+
+          {from:"not1", fromPort:"out", to:"and2", toPort:"in3"},
+          {from:"not2", fromPort:"out", to:"and3", toPort:"in2"},
+          {from:"not3", fromPort:"out", to:"and4", toPort:"in2"},
+          {from:"not4", fromPort:"out", to:"and4", toPort:"in3"},
+
+          ]
+        });
+
+      }
+      
+      // (1*2)demux
+      if(val==16)
+      {
+        myDiagram.model =
+        $(go.GraphLinksModel,
+            
+          {
+            linkFromPortIdProperty: "fromPort",
+            linkToPortIdProperty: "toPort",
+            nodeDataArray: [
+            {key:"input1", category:"input", loc:"-450 -210",text:"S"},
+  
+            {key:"and1", category:"and", loc:"-150 -100"},
+            {key:"and2", category:"and", loc:"-150 0"},
+            
+           
+            
+            {key:"not1", category:"not", loc:"-250 20"},
+  
+            {key:"hand1", category:"hand", loc:"-490 -50", text:"input"},
+            
+            {key:"output1", category:"output", loc:"50 -100"},
+            {key:"output2", category:"output", loc:"50 0"},
+           
+  
+           
+              
+            ],
+            linkDataArray: [
+            {from:"input1", fromPort:"out", to:"and1", toPort:"in2"},
+            {from:"input1", fromPort:"out", to:"not1", toPort:"in"},
+  
+            {from:"hand1", fromPort:"out", to:"and1", toPort:"in1"},
+            {from:"hand1", fromPort:"out", to:"and2", toPort:"in1"},
+  
+            
+  
+            {from:"not1", fromPort:"out", to:"and2", toPort:"in2"},
+            
+  
+            {from:"and1", fromPort:"out", to:"output1", toPort:"in1"},
+            {from:"and2", fromPort:"out", to:"output2", toPort:"in2"},
+           
+           
+            ]
+          });
+      }
+
+      // (2*4)decoder
+      if(val==17)
+      {
+        myDiagram.model =
+       $(go.GraphLinksModel,
+          
+        {
+          linkFromPortIdProperty: "fromPort",
+          linkToPortIdProperty: "toPort",
+          nodeDataArray: [
+          
+          {key:"output1", category:"output", loc:"-450 -200"},
+          {key:"output2", category:"output", loc:"-450 -100"},
+          {key:"output3", category:"output", loc:"-450 0"},
+          {key:"output4", category:"output", loc:"-450 100"},
+
+          {key:"and1", category:"and", loc:"-650 -200"},
+          {key:"and2", category:"and", loc:"-650 -100"},
+          {key:"and3", category:"and", loc:"-650 0"},
+          {key:"and4", category:"and", loc:"-650 100"},
+
+          {key:"input1", category:"input", loc:"-1050 -70",text:"input1"},
+          {key:"input2", category:"input", loc:"-1100 0",text:"input2"},
+         
+          {key:"not1", category:"not", loc:"-750 -85"},
+          {key:"not2", category:"not", loc:"-750 5"},
+          {key:"not3", category:"not", loc:"-750 100"},
+          {key:"not4", category:"not", loc:"-750 140"},
+            
+            
+          ],
+          linkDataArray: [
+         
+          
+
+          {from:"and1", fromPort:"out", to:"output1", toPort:"in"},
+          {from:"and2", fromPort:"out", to:"output2", toPort:"in"},
+          {from:"and3", fromPort:"out", to:"output3", toPort:"in"},
+          {from:"and4", fromPort:"out", to:"output4", toPort:"in"},
+
+          {from:"input1", fromPort:"out", to:"and1", toPort:"in1"},
+          {from:"input1", fromPort:"out", to:"and2", toPort:"in1"},
+          {from:"input1", fromPort:"out", to:"not2", toPort:"in"},
+          {from:"input1", fromPort:"out", to:"not3", toPort:"in"},
+
+          {from:"input2", fromPort:"out", to:"and1", toPort:"in2"},
+          {from:"input2", fromPort:"out", to:"not1", toPort:"in"},
+          {from:"input2", fromPort:"out", to:"and3", toPort:"in2"},         
+          {from:"input2", fromPort:"out", to:"not4", toPort:"in"},
+
+         
+
+          {from:"not1", fromPort:"out", to:"and2", toPort:"in2"},
+          {from:"not2", fromPort:"out", to:"and3", toPort:"in1"},
+          {from:"not3", fromPort:"out", to:"and4", toPort:"in1"},
+          {from:"not4", fromPort:"out", to:"and4", toPort:"in2"},
+
+          ]
+        });
+
+      }
+
+      // AND Gate
+      if(val==18)
+      {
+      
+      myDiagram.model =
+      $(go.GraphLinksModel,
+          
+        {
+          linkFromPortIdProperty: "fromPort",
+          linkToPortIdProperty: "toPort",
+          nodeDataArray: [
+            {key:"input1", category:"input", loc:"-350 -130"},
+            {key:"input2", category:"input", loc:"-350 -80"},
+            {key:"and1", category:"and", loc:"-150 -100"},          
+            {key:"output1", category:"output", loc:"10 -100"},
+          ],
+          linkDataArray: [
+            {from:"input1", fromPort:"out", to:"and1", toPort:"in1"},
+            {from:"input2", fromPort:"out", to:"and1", toPort:"in2"},
+            {from:"and1", fromPort:"out", to:"output1", toPort:"in2"},
+          ]
+        }
+      );
+      }
+
+      // OR Gate
+      if(val==19)
+      {
+        
+      myDiagram.model =
+      $(go.GraphLinksModel,
+          
+        {
+          linkFromPortIdProperty: "fromPort",
+          linkToPortIdProperty: "toPort",
+          nodeDataArray: [
+            {key:"input1", category:"input", loc:"-350 -130"},
+            {key:"input2", category:"input", loc:"-350 -80"},
+            {key:"and1", category:"or", loc:"-150 -100"},          
+            {key:"output1", category:"output", loc:"10 -100"},
+          ],
+          linkDataArray: [
+            {from:"input1", fromPort:"out", to:"and1", toPort:"in1"},
+            {from:"input2", fromPort:"out", to:"and1", toPort:"in2"},
+            {from:"and1", fromPort:"out", to:"output1", toPort:"in2"},
+          ]
+        }
+      );
+      }
+
+      // XOR gate
+      if(val==20)
+      {
+        // And gate
+      myDiagram.model =
+      $(go.GraphLinksModel,
+          
+        {
+          linkFromPortIdProperty: "fromPort",
+          linkToPortIdProperty: "toPort",
+          nodeDataArray: [
+            {key:"input1", category:"input", loc:"-350 -130"},
+            {key:"input2", category:"input", loc:"-350 -80"},
+            {key:"and1", category:"xor", loc:"-150 -100"},          
+            {key:"output1", category:"output", loc:"10 -100"},
+          ],
+          linkDataArray: [
+            {from:"input1", fromPort:"out", to:"and1", toPort:"in1"},
+            {from:"input2", fromPort:"out", to:"and1", toPort:"in2"},
+            {from:"and1", fromPort:"out", to:"output1", toPort:"in2"},
+          ]
+        }
+      );
+      }
+
+      // XNOR gate
+      if(val==21)
+      {
+        // And gate
+      myDiagram.model =
+      $(go.GraphLinksModel,
+          
+        {
+          linkFromPortIdProperty: "fromPort",
+          linkToPortIdProperty: "toPort",
+          nodeDataArray: [
+            {key:"input1", category:"input", loc:"-350 -130"},
+            {key:"input2", category:"input", loc:"-350 -80"},
+            {key:"and1", category:"xnor", loc:"-150 -100"},          
+            {key:"output1", category:"output", loc:"10 -100"},
+          ],
+          linkDataArray: [
+            {from:"input1", fromPort:"out", to:"and1", toPort:"in1"},
+            {from:"input2", fromPort:"out", to:"and1", toPort:"in2"},
+            {from:"and1", fromPort:"out", to:"output1", toPort:"in2"},
+          ]
+        }
+      );
+      }
+      // share the template map with the Palette
+      palette.nodeTemplateMap = myDiagram.nodeTemplateMap; // side gates to display
+          
+      palette.model.nodeDataArray = [
+        { category: "input" },
+        { category: "output" },
+        { category: "and" },
+        { category: "or" },
+        { category: "xor" },
+        { category: "not" },
+        { category: "nand" },
+        { category: "nor" },
+        { category: "xnor" },
+        { category: "hand" }
+
+      ];
+
+
+     /* // load the initial diagram
+      load();
+    */
+      // continually update the diagram
+      loop();
+    }
+
+    // update the diagram every 250 milliseconds
+    function loop() {
+      setTimeout(function() { updateStates(); loop(); }, 0);//loop update time
+    }
+
+    // update the value and appearance of each node according to its type and input values
+    function updateStates() {
+      var oldskip = myDiagram.skipsUndoManager;
+      myDiagram.skipsUndoManager = true;
+      // do all "input" nodes first
+      myDiagram.nodes.each(function(node) {
+        if (node.category === "input") {
+          doInput(node);
+        }
+      });
+      // now we can do all other kinds of nodes
+      myDiagram.nodes.each(function(node) {
+        switch (node.category) {
+          case "and": doAnd(node); break;
+          case "or": doOr(node); break;
+          case "xor": doXor(node); break;
+          case "not": doNot(node); break;
+          case "nand": doNand(node); break;
+          case "nor": doNor(node); break;
+          case "xnor": doXnor(node); break;
+          case "output": doOutput(node); break;
+          case "hand": doHand(node); break;
+          case "input": break;  // doInput already called, above
+        }
+      });
+      myDiagram.skipsUndoManager = oldskip;
+    }
+
+    // helper predicate
+    function linkIsTrue(link) {  // assume the given Link has a Shape named "SHAPE"
+      return link.findObject("SHAPE").stroke === green;
+    }
+
+    // helper function for propagating results
+    function setOutputLinks(node, color) {
+      node.findLinksOutOf().each(function(link) { link.findObject("SHAPE").stroke = color; });
+    }
+
+    // update nodes by the specific function for its type
+    // determine the color of links coming out of this node based on those coming in and node type
+
+    function doInput(node) {
+      // the output is just the node's Shape.fill
+      setOutputLinks(node, node.findObject("NODESHAPE").fill);
+    }
+
+    function doAnd(node) {
+      var color = node.findLinksInto().all(linkIsTrue) ? green : red;
+      setOutputLinks(node, color);
+    }
+    function doNand(node) {
+      var color = !node.findLinksInto().all(linkIsTrue) ? green : red;
+      setOutputLinks(node, color);
+    }
+    function doNot(node) {
+      var color = !node.findLinksInto().all(linkIsTrue) ? green : red;
+      setOutputLinks(node, color);
+    }
+
+    function doOr(node) {
+      var color = node.findLinksInto().any(linkIsTrue) ? green : red;
+      setOutputLinks(node, color);
+    }
+    function doNor(node) {
+      var color = !node.findLinksInto().any(linkIsTrue) ? green : red;
+      setOutputLinks(node, color);
+    }
+
+    function doXor(node) {
+      var truecount = 0;
+      node.findLinksInto().each(function(link) { if (linkIsTrue(link)) truecount++; });
+      var color = truecount % 2 !== 0 ? green : red;
+      setOutputLinks(node, color);
+    }
+    function doXnor(node) {
+      var truecount = 0;
+      node.findLinksInto().each(function(link) { if (linkIsTrue(link)) truecount++; });
+      var color = truecount % 2 === 0 ? green : red;
+      setOutputLinks(node, color);
+    }
+
+    function doHand(node){
+      
+      setOutputLinks(node, node.findObject("NODESHAPE").fill);
+
+     
+    }
+
+    function doOutput(node) {
+      // assume there is just one input link
+      // we just need to update the node's Shape.fill
+      node.linksConnected.each(function(link) { node.findObject("NODESHAPE").fill = link.findObject("SHAPE").stroke; });
+      setOutputLinks(node, node.findObject("NODESHAPE").fill);
+
+    }
+    /*function doHand(node){
+      var truecount = 0;
+      node.findLinksInto().each(function(linik) { if (linkIsTrue(link)) truecount++; });
+      var color = green;
+      setOutputLinks(node, color);
+    }*/
+
+    // save a model to and load a model from JSON text, displayed below the Diagram
+    function save() {
+      hello = myDiagram.model.tojson();
+    }
+    function load() {
+      myDiagram.model = go.Model.fromJson(hello);
+    }
+   // window.addEventListener('DOMContentLoaded', init);
+  </script>
